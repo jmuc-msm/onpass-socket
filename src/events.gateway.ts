@@ -71,11 +71,12 @@ export class EventsGateway
         const data = res.data;
         const doors = data.doors;
         const user = data.user;
-        url = data.iot.url_address;
+        const guest = (url = data.iot.url_address);
+        await this.beep(url);
         await this.setLoading(url);
         const fullName = data.full_name;
 
-        if (doors.length > 1) {
+        if (doors.length > 1 && user) {
           this.server.emit(`user_${user.id}_access`, {
             doors,
             fullName,
@@ -83,9 +84,11 @@ export class EventsGateway
           });
         } else {
           const [door] = doors;
-          this.server.emit(`access_${data.user.id}_success`, {
-            message: 'Puerta abierta correctamente',
-          });
+          if (user) {
+            this.server.emit(`access_${data.user.id}_success`, {
+              message: 'Puerta abierta correctamente',
+            });
+          }
           await this.activateRelay(url, door, fullName);
         }
       } catch (error) {
@@ -245,6 +248,24 @@ export class EventsGateway
         .toPromise();
     } catch (error) {
       console.log('Fallo al colocar el loading');
+    }
+  }
+
+  async beep(url) {
+    try {
+      const payload = {
+        msgType: 'ins_inout_buzzer_operate',
+        msgArg: {
+          sPosition: 'main',
+          sMode: 'on',
+          ucTime_ds: '10',
+        },
+      };
+      await this.httpService
+        .post(`${url}/api/instruction`, payload)
+        .toPromise();
+    } catch (error) {
+      console.log('Fallo al hacer beep');
     }
   }
 
