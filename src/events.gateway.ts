@@ -111,12 +111,15 @@ export class EventsGateway
 
   @SubscribeMessage('user_access')
   async userAccess(client: Socket, dto: { door_id: number; qr_code: string }) {
+    console.log('AQUI');
+    console.log(dto);
     const { data } = await this.httpService
       .post(`${this.baseUrl}/get_access_qr`, {
         door_id: dto.door_id,
         qr_code: dto.qr_code,
       })
       .toPromise();
+    console.log('AQUI NO');
     const door = data.door;
     const url = data.iot.url_address;
     const fullName = data.full_name;
@@ -124,6 +127,7 @@ export class EventsGateway
     client?.emit(`access_${data.user.id}_success`, {
       message: 'Puerta abierta correctamente',
     });
+    await this.beep(url);
     await this.activateRelay(
       url,
       {
